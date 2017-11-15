@@ -22,8 +22,8 @@ import theano.tensor as T
 import numpy as np
 
 from pymanopt import Problem
-from pymanopt.solvers import TrustRegions
-from pymanopt.manifolds import Grassmann
+from pymanopt.solvers import ConjugateGradient
+from pymanopt.manifolds import Stiefel
 
 
 def dominant_invariant_subspace(A, p):
@@ -50,19 +50,19 @@ def dominant_invariant_subspace(A, p):
     assert np.linalg.norm(A-A.T) < n * np.spacing(1), 'A must be symmetric.'
     assert p <= n, 'p must be smaller than n.'
 
-    # Define the cost on the Grassmann manifold
-    Gr = Grassmann(n, p)
+    # Define the cost on the Stiefel manifold
+    St = Stiefel(n, p)
     X = T.matrix()
     cost = -T.dot(X.T, T.dot(A, X)).trace()
 
     # Setup the problem
-    problem = Problem(manifold=Gr, cost=cost, arg=X)
+    problem = Problem(manifold=St, cost=cost, arg=X)
 
     # Create a solver object
-    solver = TrustRegions()
+    solver = ConjugateGradient(maxiter=1000, mingradnorm=1e-6)
 
     # Solve
-    Xopt = solver.solve(problem, Delta_bar=8*np.sqrt(p))
+    Xopt = solver.solve(problem)
 
     return Xopt
 
@@ -76,10 +76,35 @@ if __name__ == '__main__':
     """
     # Generate some random data to test the function
     print('Generating random matrix...')
-    A = np.random.randn(128, 128)
+    n = 100
+    A = np.random.randn(n, n)
     A = 0.5 * (A + A.T)
 
-    p = 3
+    p = 2
+
+    St = Stiefel(n, p)
+    X = T.matrix()
+    cost = -T.dot(X.T, T.dot(A, X)).trace()
+
+    # Setup the problem
+    problem = Problem(manifold=St, cost=cost, arg=X)
+
+    # Create a solver object
+    solver = ConjugateGradient(maxiter=1000, mingradnorm=1e-6)
+
+    # Solve
+    Xopt = solver.solve(problem)
+
+    print solver.iters
+
 
     # Test function...
-    dominant_invariant_subspace(A, p)
+    # dominant_invariant_subspace(A, p)
+
+    # print np.logspace(1, 5, 5)
+
+    # for n in np.logspace(10, 10000000, 6):
+    #     A = np.random.randn(n, n)
+    #     A = 0.5 * (A + A.T)
+    #     p = n // 10
+    #     dominant_invariant_subspace(A, p)

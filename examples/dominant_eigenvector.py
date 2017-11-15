@@ -26,12 +26,24 @@ def dominant_eigenvector(A):
 
     problem = Problem(manifold=manifold, cost=cost, arg=x)
     xopt = solver.solve(problem)
-    return xopt.squeeze()
+    print solver.iters
+    return xopt
+
+
+def dependence_on_matrix_size (n):
+    A = rnd.randn(n, n)
+    A = 0.5 * (A + A.T)
+
+    xopt = dominant_eigenvector(A)
+    print xopt.iters
 
 
 if __name__ == "__main__":
     # Generate random problem data.
-    n = 128
+    n = 28
+
+    # dependence_on_matrix_size(n)
+
     A = rnd.randn(n, n)
     A = 0.5 * (A + A.T)
 
