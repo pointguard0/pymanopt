@@ -46,6 +46,10 @@ class ConjugateGradient(Solver):
         else:
             self._linesearch = linesearch
         self.linesearch = None
+        self.iters = 0
+        self._cost = []
+        self._gradnorm = []
+        self._time = 0
 
     def solve(self, problem, x=None, reuselinesearch=False):
         """
@@ -85,9 +89,10 @@ class ConjugateGradient(Solver):
             x = man.rand()
 
         # Initialize iteration counter and timer
-        iter = 0
+        self.iters = 0
         stepsize = np.nan
         time0 = time.time()
+        self._time = time0
 
         if verbosity >= 1:
             print("Optimizing...")
@@ -96,8 +101,10 @@ class ConjugateGradient(Solver):
 
         # Calculate initial cost-related quantities
         cost = objective(x)
+        self._cost.append(cost)
         grad = gradient(x)
         gradnorm = man.norm(x, grad)
+        self._gradnorm.append(gradnorm)
         Pgrad = problem.precon(x, grad)
         gradPgrad = man.inner(x, grad, Pgrad)
 
@@ -111,13 +118,17 @@ class ConjugateGradient(Solver):
 
         while True:
             if verbosity >= 2:
-                print("%5d\t%+.16e\t%.8e" % (iter, cost, gradnorm))
+                print(
+                    "%5d\t%+.16e\t%.8e" %
+                    (self.iters, cost, gradnorm))
 
             if self._logverbosity >= 2:
-                self._append_optlog(iter, x, cost, gradnorm=gradnorm)
+                self._append_optlog(
+                    self.iters, x, cost, gradnorm=gradnorm)
 
             stop_reason = self._check_stopping_criterion(
-                time0, gradnorm=gradnorm, iter=iter + 1, stepsize=stepsize)
+                self._time, gradnorm=gradnorm,
+                iter=self.iters + 1, stepsize=stepsize)
 
             if stop_reason:
                 if verbosity >= 1:
@@ -205,17 +216,19 @@ class ConjugateGradient(Solver):
             # Update the necessary variables for the next iteration.
             x = newx
             cost = newcost
+            self._cost.append(cost)
             grad = newgrad
             Pgrad = Pnewgrad
             gradnorm = newgradnorm
+            self._gradnorm.append(gradnorm)
             gradPgrad = newgradPnewgrad
 
-            iter += 1
+            self.iters += 1
 
         if self._logverbosity <= 0:
             return x
         else:
-            self._stop_optlog(x, cost, stop_reason, time0,
+            self._stop_optlog(x, self._cost, stop_reason, self._time,
                               stepsize=stepsize, gradnorm=gradnorm,
-                              iter=iter)
+                              iter=self.iters)
             return x, self._optlog
